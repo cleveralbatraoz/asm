@@ -1,0 +1,127 @@
+case (value)
+{
+	case 1:
+	case 2:		X;
+	case 3:		{ Y; break; }
+	case 5:		Z;
+	default:	D;
+}
+^ no case 4, no case 0
+Compliled to the following asm:
+
+; sub	eax, 1
+cmp	eax, 5
+ja	L4
+jmp	[eax * 4 + table]
+
+L1:	X
+L2:	Y
+	jmp L5
+L3:	Z
+L4:	D
+L5:
+
+table dd L4, L1, L1, L2, L4, L3
+         0   1   2   3   4   5
+
+eax * 4 because memory address is 4 bytes.
+
+------------------------------------------------------------------------------------------------------------------------
+
+push	ebp
+mov 	ebp, esp
+sub	esp, 32
+
+...
+
+mov	esp, ebp
+pop	ebp
+ret
+
+EBP register.
+-1 register (ebp). Might be omitted in case of optimizing number of registers used. Without this stack frames are lost.
+Exceptions still work even if stack frames are disabled.
+Helpful for debug informtaion. Stack trace could be easily obtained in case of crash with help of stack frames.
+Also helpful for profiling.
+In case os debug information enabled (via compiler flag) stack frames aren't needed.
+Debug information carries more information than stack frames themselves.
+
+ENTER instruction. Never used by compilers. Not needed in modern world. Too slow.
+leave instruction. (mov esp, ebp; pop epb) = leave. Risky and unpredictable.
+
+------------------------------------------------------------------------------------------------------------------------
+
+alloca (_alloca more officially)
+Similar to malloc but allocated memory on stack.
+In C: alloca(size)
+Could automatically disable stack frames.
+
+------------------------------------------------------------------------------------------------------------------------
+
+Calling conventions
+cdecl, stdcall, fastcall (vectorcall), thiscall. Also there's Pascal convention. Not used nowdays.
+For now vectorcall is the same as fastcall. It differs in SIMD.
+
+cdecl: Stack, reversed order. Caller clears the stack. ret (without argument) instruction is used in the end.
+stdcall: Stack, reversed order. Callie clears the stack. ret with argument is used.
+
+fastcall: Not a standard but rather a general idea. Some arguments on stack others in registers.
+For example, in msvc ECX + EDX used.
+
+thiscall: `this` is passed in ECX. Otherwise the same as fastcall. Callie clears the stack.
+
+ret pops back pointer and clears the stack with its argument (if present).
+vararg functions can't be expressed in cdecl. But are expressed in stdcall.
+WinAPI uses stdcall and cdecl for vararg functions.
+
+In cdecl:
+push	e
+push	b
+push	a
+call	f
+add	esp, 12
+
+In cdecl, arguments belong to the function called. It can do everything with them.
+
+4-byte integer -> EAX
+boolean -> AL
+long long -> EAX + EDX
+
+If a function returns bool caller required to see at AL not EAX.
+
+In case of large data is returned who is responsible for memory freeing?
+Explanation: only caller knows how to free the allocated memory. So it's a caller.
+In such a case, caller passes a pointer as 0'th argument.
+Holy cow is going on in case of 0'th argument is already present (e.g. `this`). There're more than one "0'th" argument.
+It happens in every convention, not just in thiscall.
+There isn't a widely accepted agreement.
+
+X f(a, b);
+
+Microsoft:
+X* f(this, X*, a, b);
+
+Unix:
+X* f(X*, this, a, b);
+
+Unix is better because it's implementable in C in the following way:
+X f(this, a, b) <- call in C
+(returned value is not a pointer)
+These are totally equal. It's very handy.
+
+Always try to design your API in the way returned value is capable to be stored in a single register.
+
+EBX, EBP, ESI, EDI - saved registers.
+EAX, ECX, EDX - unsaved.
+It's fair for all the 32-bit calling conventions.
+
+------------------------------------------------------------------------------------------------------------------------
+
+By default, it isn't possible (also not reasonable in general) to allocate 1MB or more on stack. OS require additional
+flag for thread or any executable.
+
+------------------------------------------------------------------------------------------------------------------------
+
+Read Agner Fog's paper (PDF) "Calling conventions". Link: agner.org.
+
+
