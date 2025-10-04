@@ -1,0 +1,173 @@
+64-bit world
+
+------------------------------------------------------------------------------------------------------------------------
+
+add	eax, ecx
+add	ax, cx
+These are exactly the same (the same machine code), the difference lies in interpretation
+
+add	al, cl
+It's different.
+The preffix is only responsible for switching between 16 and 32 bit.
+
+Another preffix is responsible for memory addressing.
+Preffix is a part of a command.
+
+------------------------------------------------------------------------------------------------------------------------
+
+Intel made Itanium (IA64). It's incompatible with X86. It failed.
+
+Originally the 64-bit extension for X86 was called AMD64 because AMD made it.
+
+The reason the extension was invented is the addresing limit of 4GB.
+Actually it was 2GB for software because system preserves some part for its own purposes.
+
+AMD Athlon is much better than Intel IA.
+
+AMD64 = X86_64 = X64
+
+Intel and AMD are highly codependent because both of them have patents for X86 architecture.
+If one of them revoke the patient another one gets in trouble. :)
+
+Only 48 bits are used for addressing but pointers are 64-bit.
+
+------------------------------------------------------------------------------------------------------------------------
+
+EAX -> RAX
+63 -> 0
+RAX = [ ... 32-bit ... ] + EAX
+EAX = [ ... 16-bit ... ] + AH + AL
+
+bp, sp, si, di -> bpl, spl, sil, dil
+
+------------------------------------------------------------------------------------------------------------------------
+
+New eight general purpose registers: R8, R9, ... R15
+R8d, R8w, R8b
+
+MOV	AH, CL works fine.
+MOV	AH, R8B doesn't work. Because of encoding reasons.
+Mixing H-registers with new registers is impossible.
+It isn't a problem.
+
+In case of writing to low 32-bit half, the high 32-bit is zeroed. Only works in this case. For example, mov eax.
+
+XOR	EAX, EAX
+is faster and smaller than
+XOR	RAX, RAX
+because it doesn't require new (wider) encoding.
+
+Relates to 32-bit (old) registers only.
+
+NOP (0x90) was xchg eax, eax in 32-bit. In 64-bit it still works fine. There's just an if statement for this. :)
+
+0xCC (int3) is used for filling. It stands for getting out to debugger.
+NOP is executable, int3 isn't supposed to be executed.
+Aligning inside function uses NOP.
+
+------------------------------------------------------------------------------------------------------------------------
+
+Addressing
+
+RAX   RAX
+... + ...      * 1/2/4/8 + offset32
+      no RSP
+...   ...
+R15   R15
+-------------------
+RIP
+
+Constant isn't 64-bit. Offset is also 32-bit. Signed.
+
+64-bit commands are used almost nowhere.
+Except
+mov	ROG64, const64
+and
+mov	acc, [const64]
+acc is al, ax, eax, rax
+
+Other constants are 32-bit.
+
+push	<label> -> label is a constant
+In 64-bit it's impossible because push is 32-bit command.
+Could be used instead:
+mov	reg, <label>
+push	reg
+Meh, it's poor.
+
+The true way is:
+default rel
+lea	reg, [<label>] <- RIP + offset
+
+------------------------------------------------------------------------------------------------------------------------
+
+Removed commands
+
+AAA, AAM, DAS... <- strange ones
+BOUDN, INTO <- also strange
+SALC <- was interesting, but not documented
+
+PUSHA(D), POPA(D) <- push/pop all general purpose registers
+
+jmp/call for absolute <- some forms of (long) jumps
+
+sysenter/sysexit (no args) <- common 32-bit commands.
+Intel's commands.
+int (interruption) could be used, but is way slow and dedicated for hardware, not software.
+Effectively is jump from 3th ring to 0th ring and back.
+syscall/sysret <- AMD' commands. Dumps return address. Have used by nobody on 32-bit.
+AMD dropped support of sysenter/sysexit in AMD64. AMD's commands are used in 64-bit on both Intel and AMD.
+
+------------------------------------------------------------------------------------------------------------------------
+
+Calling conventions
+
+- Windows fastcall64
+The only calling convention on win64. __cdecl and others are ignored by compiler. :)
+args (in order): RCX, RDX, R8, R9 *OR* XMM0..3 depending on type (floating-point).
+int + float -> RCX + XMM1
+
+Saved registers: RBX, RBP, RSI, RDI, R12-R15, (XMM6..15 <- it's terrible).
+Result: acc [8, 64] or XMM0
+
+Feature: shadow space
+Spefic stack configuration:
+FF
+...
+arg5
+arg4
+shadow space (32 byte) <- great for vararg. 32 byte = 4 registers could be easily dumped.
+ret <- on this step RSP should be divisible by 16 (call command). When right in function RSP mod 16 have to be 8.
+...
+00
+
+4-byte int is passed in 8-byte register on 64-bit system because of stack granularity.
+
+Dec stackpointer, only in the end it gets back.
+
+- SysV (AMD's proposal)
+RDI, RSI, RDX, RCX, R8, R9 and XMM0..7
+int + float -> rdi + XMM0
+
+Highly increased vararg complexity.
+For vararg function number of arguments in XMM have to be put in RAX.
+Saved registers: RBX, RBP, R12-R15
+Result: acc [8..128] + XMM0..1
+Alignment is same as fastcall64.
+
+Feature: red zone
+FF
+...
+arg5
+arg4
+ret
+red zone (128 byte) <- RSP. This data (128 byte) is saved. Data below isn't guaranteed to be saved.
+...
+00
+Red zone is just a convinient thing. If a function requires less than 128 byte of stack, no sub/add needed.
+
+------------------------------------------------------------------------------------------------------------------------
+
+No _ needed on Windows in global names.
+
+
