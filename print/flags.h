@@ -3,55 +3,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-enum SignFlags
-{
-    fSignDefault = 0,
-    fSignAll = 1,
-    fSignSpace = 2,
-};
+#define FLAG_SIGN_PLUS 0x01
+#define FLAG_SIGN_SPACE 0x02
+#define FLAG_ZERO_PAD 0x04
+#define FLAG_LEFT_ALIGN 0x08
 
-enum LeadingZeroesFlags
-{
-    fLeadingZeroesDisable = 0,
-    fLeadingZeroesEnable = 1,
-};
-
-enum AlignFlags
-{
-    fAlignRight = 0,
-    fAlignLeft = 1,
-};
-
-enum Offsets
-{
-    fSignMaskOffset = 0,
-    fLeadingZeroesOffset = 2,
-    fAlignOffset = 3,
-};
-
-enum Masks
-{
-    fSignMask = 0x3,
-    fLeadingZeroesMask = 0x1,
-    fAlignMask = 0x1,
-};
-
-bool isSignDefault(uint8_t flags);
-bool isSignAll(uint8_t flags);
-bool isSignSpace(uint8_t flags);
-
-void setSignDefault(uint8_t *flags);
-void setSignAll(uint8_t *flags);
-void setSignSpace(uint8_t *flags);
-
-bool isLeadingZeroesDisable(uint8_t flags);
-bool isLeadingZeroesEnable(uint8_t flags);
-void setLeadingZeroesDisable(uint8_t *flags);
-
-void setLeadingZeroesEnable(uint8_t *flags);
-
-bool isAlignLeft(uint8_t flags);
-bool isAlignRight(uint8_t flags);
-
-void setAlignLeft(uint8_t *flags);
-void setAlignRight(uint8_t *flags);
+#define HAS_SIGN_PLUS(f) ((f)&FLAG_SIGN_PLUS)
+#define HAS_SIGN_SPACE(f) ((f)&FLAG_SIGN_SPACE)
+#define HAS_ZERO_PAD(f) ((f)&FLAG_ZERO_PAD)
+#define HAS_LEFT_ALIGN(f) ((f)&FLAG_LEFT_ALIGN)

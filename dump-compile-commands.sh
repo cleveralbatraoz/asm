@@ -1,3 +1,3 @@
 #!/bin/bash
 
-bear -- make -C print build
+bear -- make -C print build-c

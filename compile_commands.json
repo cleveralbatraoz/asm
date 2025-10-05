@@ -3,6 +3,7 @@
     "arguments": [
       "/usr/bin/gcc",
       "-c",
+      "-DC_IMPL",
       "-Wall",
       "-std=c17",
       "-m32",
@@ -20,6 +21,7 @@
     "arguments": [
       "/usr/bin/gcc",
       "-c",
+      "-DC_IMPL",
       "-Wall",
       "-std=c17",
       "-m32",
@@ -37,6 +39,7 @@
     "arguments": [
       "/usr/bin/gcc",
       "-c",
+      "-DC_IMPL",
       "-Wall",
       "-std=c17",
       "-m32",
@@ -54,6 +57,7 @@
     "arguments": [
       "/usr/bin/gcc",
       "-c",
+      "-DC_IMPL",
       "-Wall",
       "-std=c17",
       "-m32",
