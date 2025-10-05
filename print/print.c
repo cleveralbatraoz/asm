@@ -1,226 +1,196 @@
 #include "print.h"
 
+#include "flags.h"
+#include "format.h"
+
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
 
-enum AlignFlags
+static uint32_t monus(uint32_t a, uint32_t b)
 {
-    fAlignLeft = 1,
-};
-
-enum SignFlags
-{
-    fSignBoth = 1,
-    fSignSpace = 2,
-};
-
-enum PrependFlags
-{
-    fPrependZeroes = 1,
-};
-
-struct Format
-{
-    enum AlignFlags align_flags;
-    enum SignFlags sign_flags;
-    enum PrependFlags prepend_flags;
-    uint32_t width;
-};
+    if (a < b)
+    {
+        return 0;
+    }
+    return a - b;
+}
 
 static uint32_t hexval(char c)
 {
     return ((uint32_t)((uint32_t)c & 0xFu)) + (((uint32_t)c >> 6) * 9u);
 }
 
-static int is_zero(const uint8_t num[SIZE])
+static void be_negate(uint8_t num[SIZE])
 {
-    int i;
-    for (i = 0; i < SIZE; ++i)
-    {
-        if (num[i] != 0)
-        {
-            return 0;
-        }
-    }
-    return 1;
-}
-
-static void invert(uint8_t num[SIZE])
-{
-    for (uint32_t i = 0; i < SIZE; ++i)
-    {
-        num[i] = ~num[i];
-    }
-}
-
-static void add(uint8_t num[SIZE], uint8_t digit)
-{
-    uint32_t carry = digit;
-    for (uint32_t i = 0; i < SIZE; ++i)
-    {
-        uint32_t cur = (uint32_t)num[i] + carry;
-        num[i] = (uint8_t)cur;
-        carry = cur >> 8;
-        if (carry == 0)
-        {
-            break;
-        }
-    }
-}
-
-static void muladd16(uint8_t num[SIZE], uint32_t digit)
-{
-    uint32_t carry = digit;
-    for (uint32_t i = 0; i < SIZE; ++i)
-    {
-        uint32_t cur = ((uint32_t)num[i] << 4) + carry;
-        num[i] = (uint8_t)(cur & 0xFFu);
-        carry = cur >> 8;
-    }
-}
-
-static uint32_t divmod10(uint8_t num[SIZE])
-{
-    uint32_t r = 0;
+    uint32_t carry = 1;
     for (uint32_t i = SIZE; i > 0; --i)
     {
-        uint32_t cur = (r << 8) | num[i - 1];
-        num[i - 1] = (uint8_t)(cur / 10);
-        r = cur % 10;
+        num[i - 1] = ~num[i - 1];
+        uint32_t sum = (uint32_t)num[i - 1] + carry;
+        num[i - 1] = (uint8_t)sum;
+        carry = sum >> 8;
     }
-    return r;
 }
 
-static void hex_to_i128(uint8_t num[SIZE], const char *hex)
+bool divmod10(char *out, uint8_t num[SIZE])
 {
-    if (hex == NULL)
-    {
-        return;
-    }
-
+    uint32_t remainder = 0;
+    bool is_zero = true;
     for (uint32_t i = 0; i < SIZE; ++i)
     {
-        num[i] = 0;
+        is_zero = is_zero && (num[i] == 0x0);
+        uint32_t current = (remainder << 8) | num[i];
+        num[i] = (uint8_t)(current / 10);
+        remainder = current % 10;
+    }
+    *out = '0' + remainder;
+    return is_zero;
+}
+
+static bool store(uint8_t num[SIZE], const char *hex)
+{
+    for (uint32_t i = 0; i < SIZE; ++i)
+    {
+        num[i] = 0x00;
     }
 
-    bool sign = false;
+    bool is_negative = false;
     if (hex[0] == '-')
     {
-        sign = true;
+        is_negative = true;
+        ++hex;
+    }
+
+    uint8_t buf[SIZE];
+    uint32_t write_idx = 0;
+
+    const char *end = hex;
+    while (*end != '\0')
+    {
+        ++end;
+    }
+
+    if ((end - hex) % 2 == 1)
+    {
+        buf[write_idx++] = hexval(*hex);
         ++hex;
     }
 
     while (*hex != '\0')
     {
-        uint32_t v = hexval(*hex);
-        muladd16(num, v);
-        ++hex;
+        uint32_t high = hexval(*hex);
+        uint32_t low = hexval(*(hex + 1));
+        buf[write_idx++] = (high << 4) | low;
+        hex += 2;
     }
 
-    if (sign)
+    for (uint32_t i = 0; i < write_idx; ++i)
     {
-        invert(num);
-        add(num, 1);
+        num[SIZE - write_idx + i] = buf[i];
     }
+
+    if (num[0] & 0x80)
+    {
+        is_negative = !is_negative;
+        be_negate(num);
+    }
+
+    return is_negative;
 }
 
-static void i128_to_dec(char *out, const uint8_t in[SIZE])
+static uint32_t print_digits(char *out, uint8_t num[SIZE])
 {
-    uint8_t num[SIZE];
-    char buf[64];
-    int n = 0;
-    int i, j;
+    uint32_t written = 0;
 
-    for (i = 0; i < SIZE; ++i)
+    char digits[64];
+    uint32_t digit_count = 0;
+    while (!divmod10(digits + digit_count, num))
     {
-        num[i] = in[i];
+        ++digit_count;
+    }
+    if (digit_count == 0)
+    {
+        digits[digit_count++] = '0';
     }
 
-    bool sign = false;
-    if (num[SIZE - 1] & 0x08)
+    for (uint32_t i = digit_count; i > 0; --i)
     {
-        invert(num);
-        add(num, 1);
-        sign = true;
+        out[written++] = digits[i - 1];
     }
 
-    do
-    {
-        buf[n] = (char)('0' + divmod10(num));
-        ++n;
-    } while (!is_zero(num));
-
-    if (sign)
-    {
-        buf[n] = '-';
-        ++n;
-    }
-
-    for (j = 0; j < n; ++j)
-    {
-        out[j] = buf[n - 1 - j];
-    }
-    out[n] = '\0';
+    return written;
 }
 
-static void parse_format(const char *fmt, struct Format *spec)
+static void bytes_to_dec(char *out, const struct Format *spec, uint8_t num[SIZE], bool is_negative)
 {
-    spec->align_flags = 0;
-    spec->sign_flags = 0;
-    spec->prepend_flags = 0;
-    spec->width = 0;
+    uint32_t written = 0;
 
-    if (*fmt != '%')
+    char digits[4 * SIZE];
+    uint32_t digit_counts = print_digits(digits, num);
+
+    uint32_t for_sign = is_negative || isSignSpace(spec->flags) || isSignAll(spec->flags);
+
+    uint32_t prepend_spaces = 0;
+    uint32_t leading_zeroes = 0;
+    uint32_t append_spaces = 0;
+
+    if (isAlignLeft(spec->flags))
     {
-        return;
+        append_spaces = monus(spec->width, digit_counts + for_sign);
+    }
+    else if (isLeadingZeroesEnable(spec->flags))
+    {
+        leading_zeroes = monus(spec->width, digit_counts + for_sign);
+    }
+    else
+    {
+        prepend_spaces = monus(spec->width, digit_counts + for_sign);
     }
 
-    ++fmt;
-
-    bool run = true;
-    while (run && *fmt != '\0')
+    for (uint32_t i = 0; i < prepend_spaces; ++i)
     {
-        switch (*fmt)
-        {
-        case '-': {
-            spec->align_flags = fAlignLeft;
-            break;
-        }
-        case '+': {
-            spec->sign_flags = fSignBoth;
-            break;
-        }
-        case ' ': {
-            spec->sign_flags = fSignSpace;
-            break;
-        }
-        case '0': {
-            spec->prepend_flags = fPrependZeroes;
-            break;
-        }
-        default: {
-            run = false;
-        }
-        }
-
-        ++fmt;
+        out[written++] = ' ';
     }
 
-    while ('0' <= *fmt && *fmt <= '9')
+    if (is_negative)
     {
-        spec->width = spec->width * 10 + *fmt - '0';
-        ++fmt;
+        out[written++] = '-';
     }
+    else if (isSignAll(spec->flags))
+    {
+        out[written++] = '+';
+    }
+    else if (isSignSpace(spec->flags))
+    {
+        out[written++] = ' ';
+    }
+
+    for (uint32_t i = 0; i < leading_zeroes; ++i)
+    {
+        out[written++] = '0';
+    }
+
+    for (uint32_t i = 0; i < digit_counts; ++i)
+    {
+        out[written++] = digits[i];
+    }
+
+    for (uint32_t i = 0; i < append_spaces; ++i)
+    {
+        out[written++] = ' ';
+    }
+
+    out[written] = '\0';
 }
 
 void print(char *out, const char *format, const char *hex)
 {
-    uint8_t num[SIZE];
-    hex_to_i128(num, hex);
-
     struct Format spec;
     parse_format(format, &spec);
 
-    i128_to_dec(out, num);
+    uint8_t num[SIZE];
+    bool is_negative = store(num, hex);
+
+    bytes_to_dec(out, &spec, num, is_negative);
 }

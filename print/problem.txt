@@ -19,4 +19,3 @@ void print(char *out_buf, const char *format, const char *hex_number);
 int x;
 sscanf("<hex_number>", "%x", &x);
 printf("%<format>i", x);
-

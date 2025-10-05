@@ -1,0 +1,70 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-std=c17",
+      "-m32",
+      "-g",
+      "-I..",
+      "-o",
+      "bin/test",
+      "flags.c"
+    ],
+    "directory": "/home/hamster/itmo/asm/print",
+    "file": "/home/hamster/itmo/asm/print/flags.c",
+    "output": "/home/hamster/itmo/asm/print/bin/test"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-std=c17",
+      "-m32",
+      "-g",
+      "-I..",
+      "-o",
+      "bin/test",
+      "format.c"
+    ],
+    "directory": "/home/hamster/itmo/asm/print",
+    "file": "/home/hamster/itmo/asm/print/format.c",
+    "output": "/home/hamster/itmo/asm/print/bin/test"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-std=c17",
+      "-m32",
+      "-g",
+      "-I..",
+      "-o",
+      "bin/test",
+      "print.c"
+    ],
+    "directory": "/home/hamster/itmo/asm/print",
+    "file": "/home/hamster/itmo/asm/print/print.c",
+    "output": "/home/hamster/itmo/asm/print/bin/test"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Wall",
+      "-std=c17",
+      "-m32",
+      "-g",
+      "-I..",
+      "-o",
+      "bin/test",
+      "main.c"
+    ],
+    "directory": "/home/hamster/itmo/asm/print",
+    "file": "/home/hamster/itmo/asm/print/main.c",
+    "output": "/home/hamster/itmo/asm/print/bin/test"
+  }
+]

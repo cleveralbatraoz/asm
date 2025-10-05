@@ -1,0 +1,54 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug print test",
+            "program": "${workspaceFolder}/print/bin/test",
+            "args": [],
+            "cwd": "${workspaceFolder}/print",
+            "preLaunchTask": "build",
+            "initCommands": [
+                "settings set target.x86-disassembly-flavor intel",
+                "type format add --format hex uint8_t",
+                "type format add --format hex int8_t",
+                "type format add --format hex uint16_t",
+                "type format add --format hex int16_t",
+                "type format add --format hex uint32_t",
+                "type format add --format hex int32_t",
+                "type format add --format hex uint64_t",
+                "type format add --format hex int64_t",
+                "type format add --format hex 'unsigned char'",
+                "type format add --format hex 'unsigned short'",
+                "type format add --format hex 'unsigned int'",
+                "type format add --format hex 'unsigned long'",
+                "type format add --format hex 'unsigned long long'"
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug print test (no build)",
+            "program": "${workspaceFolder}/print/bin/test",
+            "args": [],
+            "cwd": "${workspaceFolder}/print",
+            "initCommands": [
+                "settings set target.x86-disassembly-flavor intel",
+                "type format add --format hex uint8_t",
+                "type format add --format hex int8_t",
+                "type format add --format hex uint16_t",
+                "type format add --format hex int16_t",
+                "type format add --format hex uint32_t",
+                "type format add --format hex int32_t",
+                "type format add --format hex uint64_t",
+                "type format add --format hex int64_t",
+                "type format add --format hex 'unsigned char'",
+                "type format add --format hex 'unsigned short'",
+                "type format add --format hex 'unsigned int'",
+                "type format add --format hex 'unsigned long'",
+                "type format add --format hex 'unsigned long long'"
+            ]
+        }
+    ]
+}
