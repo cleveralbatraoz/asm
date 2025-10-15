@@ -1,2 +1,5 @@
-print/bin
+print/bin/
+call_printf/bin/
+call_asm/bin/
 .cache
+
