@@ -1,0 +1,87 @@
+FPU / X87
+
+R0 - R7  -> stack machine over the registers with stack pointer
+ST0 - ST7 -> program name of them
+80-bit (extended precision)
+
+80 bit = [1 sign bit, 15 exp, 64 mantise]
+
+The registers have occupancy flag
+Result is always NaN when writing to occupied register
+CPU maintains bit-mask representing the occupancy
+
+Closest even mode by default
+To zero, -inf, +inf are possible
+
+There is computation precision flag. It also affects the speed. Not all commands are affected. +, - are unaffected.
+
+No reg to reg commands. Only via RAM. EAX -> memory -> push to ST
+
+Memory read/write modes:
+float (single precision)
+double
+ext double
+
+CPU always stores ext double
+Only signed ints could be converted to float by design. => converting from uint to float in C is not trivial
+
+fld dword [addr] -> push on stack. dword => float, qword => double, tbyte => ext double
+
+fild dword [addr]
+fbld
+
+fld stX -> push with copy
+
+fldz
+fld1
+fldpi -> nice one, precise PI with rounding with regards to rounding mode (above)
+
+fst(p) => copy stack top to memory, p means with pop
+fist(p)
+fbstp
+
+fxch => exchange top with arg stX, completed in 0 tacts
+
+fcmov
+
+calling/returning requires empty state (possible with the result on top) in 32-bit
+
+fadd(p)/fiadd
+fadd st0, st3
+fadd st3, st0
+fadd st0, [mem addr]
+^ always requires st0
+
+fiadd st0, [mem addr]
+
+fsub/fsubr
+fsub a -=b
+fsubr a = b - a
+write always to the first arg
+
+fmul/fdiv/fdivr
+
+fprem => reamainder of st0 / st1. subtracts up to 64 times. helpful in trigonometry
+
+fabs
+
+fchs - flips sign bit
+
+frndint - round up to int
+
+fcomi(p) - compare
+
+fsqrt
+fsin/fcos/fsincos/fptan/fpatan
+
+fincstp/fdecstp
+ffree
+fnop
+
+
+
+
+
+
+rdtscp
+
