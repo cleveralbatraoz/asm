@@ -1,5 +1,5 @@
 print/bin/
 call_printf/bin/
 call_asm/bin/
-fpu/bin/
+atan/bin/
 .cache

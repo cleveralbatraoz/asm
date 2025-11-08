@@ -1,11 +1,11 @@
 ; x - x^3/3 + x^5/5 - x^7/7 ...
-; float fpuatan(float x, uint32_t n)
+; float fpu_atan(float x, uint32_t n)
 
-        global fpuatan
+        global fpu_atan
 
         section .text
 
-fpuatan:
+fpu_atan:
         push ebp
         mov ebp, esp
 
@@ -18,9 +18,9 @@ fpuatan:
         fchs                           ; x = -x
         fstp dword [ebp - 4]           ; push -x^2 to CPU stack [epb - 4]
 
-        fld z            ; push(0)
+        fldz                           ; push(0)
 
-        fld dword [ebp + 8]                        ; push(x)
+        fld dword [ebp + 8]            ; push(x)
 
         fld1                           ; push(1)
         fchs                           ; st0 = -1
