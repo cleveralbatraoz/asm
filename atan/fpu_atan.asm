@@ -23,21 +23,20 @@ fpu_atan:
         fld dword [ebp + 8]            ; push(x)
 
         fld1                           ; push(1)
-        fchs                           ; st0 = -1
 
         fld dword [ebp - 4]            ; push(-x^2)
 
 ; st0 = -x^2
-; st1 = -1
+; st1 = 1
 ; st2 = x
-; st3 = x
+; st3 = 0 (acc)
 
         fxch st2                       ; swap(st0, st2)
 
 ; st0 = x
 ; st1 = 1
 ; st2 = -x^2
-; st3 = x
+; st3 = 0 (acc)
 
 ; st0 = term
 ; st1 = denominator
@@ -48,35 +47,22 @@ fpu_atan:
         jz done
 
 loop:
+        ; result += current_term / denominator
+        fld st0                       ; copy term
+        fdiv st0, st2                  ; term / denominator (denom is at st2 after fld)
+        fadd st4, st0                  ; acc += term / denominator (acc is at st4 after fld)
+        fstp st0                       ; pop
+
+        ; current_term *= multiplier
         fmul st0, st2                  ; term *= -x^2
 
-        fxch st1                       ; term <-> denominator
-
-; st0 = denominator
-; st1 = term
-
-        fld1                           ; push(1)
-        fadd st0, st0                  ; st0 = 2
-
-; st0 = 2
-; st1 = denominator
-; st2 = term
-
-        fadd st1, st0                  ; denominator += 2
-
-        fstp st0                       ; pop
-        fxch st1                       ; term <-> denominator
-
-        fld st0
-; st0 = term (copy)
-; st1 = term
-; st2 = denominator
-
-        fdiv st0, st2                  ; st0 = term / denominator
-
-        fadd st4, st0                  ; acc += term / denominator
-
-        fstp st0                       ; pop
+        ; denominator += 2
+        fxch st1                      ; term <-> denominator
+        fld1                          ; push(1)
+        fadd st0, st0                 ; st0 = 2
+        fadd st1, st0                 ; denominator += 2
+        fstp st0                      ; pop
+        fxch st1                      ; term <-> denominator
 
         dec ecx
         jnz loop
