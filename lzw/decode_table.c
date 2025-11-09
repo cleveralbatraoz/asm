@@ -1,7 +1,9 @@
 #include "decode_table.h"
 
 #include "byte_writer.h"
+#include "common.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -13,47 +15,91 @@ void decode_table_init(struct decode_table *table)
         table->entries[i].byte = 0;
         table->entries[i].has_value = 0;
     }
-    table->next_code = 256;
+    table->next_code = FIRST_CODE;
 }
 
-int decode_table_contains(struct decode_table const *table, int16_t code)
+bool decode_table_contains(struct decode_table const *table, int16_t code)
 {
-    return code < 256 || table->entries[code].has_value;
+    if (!is_valid_code(code))
+    {
+        return false;
+    }
+    return code < FIRST_CODE || table->entries[code].has_value == 1;
 }
 
-void decode_table_append(struct decode_table *table, int16_t code, uint8_t byte)
+int16_t decode_table_append(struct decode_table *table, int16_t code, uint8_t byte)
 {
+    if (!is_valid_code(code))
+    {
+        return INVALID_CODE;
+    }
+
     if (table->next_code >= MAX_CODE)
     {
-        return;
+        return TABLE_OVERFLOW;
     }
 
     table->entries[table->next_code].previous_code = code;
     table->entries[table->next_code].byte = byte;
     table->entries[table->next_code].has_value = 1;
+
     ++table->next_code;
+
+    return table->next_code;
 }
 
 uint8_t decode_table_get_first_byte(struct decode_table const *table, int16_t code)
 {
-    while (code >= 256)
+    if (!is_valid_code(code))
     {
+        return INVALID_CODE;
+    }
+
+    while (code >= FIRST_CODE)
+    {
+        if (!is_valid_code(code))
+        {
+            return INVALID_CODE;
+        }
+
+        if (table->entries[code].has_value == 0)
+        {
+            return DECODE_TABLE_INVARIANT_VIOLATION;
+        }
+
         code = table->entries[code].previous_code;
     }
 
-    return code;
+    if (!is_valid_code(code))
+    {
+        return INVALID_CODE;
+    }
+
+    return (uint8_t)code;
 }
 
 int16_t decode_table_write_bytes(struct byte_writer *w, int16_t code, struct decode_table const *table)
 {
-    if (code < 256)
+    if (!is_valid_code(code))
+    {
+        return INVALID_CODE;
+    }
+
+    if (code < FIRST_CODE)
     {
         return byte_writer_write(w, code);
     }
 
-    if (decode_table_write_bytes(w, table->entries[code].previous_code, table) == -1)
+    if (table->entries[code].has_value == 0)
     {
-        return -1;
+        return DECODE_TABLE_INVARIANT_VIOLATION;
+    }
+
+    int16_t result = decode_table_write_bytes(w, table->entries[code].previous_code, table);
+
+    if (error(result))
+    {
+        return result;
     }
 
     return byte_writer_write(w, table->entries[code].byte);

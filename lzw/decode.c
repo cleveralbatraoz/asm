@@ -27,56 +27,86 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
 
     uint8_t bits_count = 9;
 
-    int16_t code = reader_next(&r, bits_count);
-    if (code == -1)
-    {
-        return -1;
-    }
-    if (code < 256)
-    {
-        byte_writer_write(&w, code);
-    }
-    else
-    {
-        return -1;
-    }
-
-    int16_t previous_code = code;
+    int16_t previous_code = CLEAR_CODE;
+    int16_t code;
     while (reader_has_next(&r, bits_count))
     {
         code = reader_next(&r, bits_count);
-        if (code == -1)
+        if (error(code))
         {
-            return -1;
+            return code;
         }
 
-        uint8_t append_byte;
-
-        if (decode_table_contains(&table, code))
+        if (code == CLEAR_CODE)
         {
-            if (decode_table_write_bytes(&w, code, &table) == -1)
+            decode_table_init(&table);
+            bits_count = 9;
+        }
+        else if (code == END_OF_INFORMATION)
+        {
+            break;
+        }
+        else if (!is_valid_code(code))
+        {
+            return INPUT_INVARIANT_VIOLATION;
+        }
+        else if (previous_code == CLEAR_CODE)
+        {
+            int16_t result = byte_writer_write(&w, code);
+            if (error(result))
             {
-                return -1;
+                return result;
             }
-
-            append_byte = decode_table_get_first_byte(&table, code);
         }
         else
         {
-            if (decode_table_write_bytes(&w, previous_code, &table) == -1)
+            uint8_t append_byte;
+
+            if (decode_table_contains(&table, code))
             {
-                return -1;
+                int16_t result = decode_table_write_bytes(&w, code, &table);
+                if (error(result))
+                {
+                    return result;
+                }
+
+                append_byte = decode_table_get_first_byte(&table, code);
+                if (error(append_byte))
+                {
+                    return append_byte;
+                }
+            }
+            else
+            {
+                int16_t result = decode_table_write_bytes(&w, previous_code, &table);
+                if (error(result))
+                {
+                    return result;
+                }
+
+                append_byte = decode_table_get_first_byte(&table, previous_code);
+                if (error(append_byte))
+                {
+                    return append_byte;
+                }
+
+                result = byte_writer_write(&w, append_byte);
+                if (error(result))
+                {
+                    return result;
+                }
             }
 
-            append_byte = decode_table_get_first_byte(&table, previous_code);
-            byte_writer_write(&w, append_byte);
-        }
+            int16_t result = decode_table_append(&table, previous_code, append_byte);
+            if (error(result))
+            {
+                return result;
+            }
 
-        decode_table_append(&table, previous_code, append_byte);
-
-        if (is_power_of_two(table.next_code + 1) && bits_count < MAX_BITS_COUNT) // TODO: mb omit second check?
-        {
-            bits_count++;
+            if (is_power_of_two(table.next_code + 1) && bits_count < MAX_BITS_COUNT)
+            {
+                bits_count++;
+            }
         }
 
         previous_code = code;

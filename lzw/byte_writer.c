@@ -1,5 +1,7 @@
 #include "byte_writer.h"
 
+#include "common.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -10,17 +12,17 @@ void byte_writer_init(struct byte_writer *w, uint8_t *data, size_t size)
     w->write_index = 0;
 }
 
-int32_t byte_writer_write(struct byte_writer *w, int16_t data)
+int16_t byte_writer_write(struct byte_writer *w, uint8_t byte)
 {
     if (w->write_index >= w->size)
     {
-        return -1;
+        return BYTE_WRITER_OVERFLOW;
     }
 
-    w->data[w->write_index] = data;
+    w->data[w->write_index] = byte;
     ++w->write_index;
 
-    return 1;
+    return SUCCESS;
 }
 
 size_t byte_writer_written_bytes(struct byte_writer const *w)

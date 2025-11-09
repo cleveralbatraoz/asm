@@ -1,10 +1,12 @@
 #include "../minunit/minunit.h"
 
+#include "common.h"
 #include "decode.h"
 #include "encode.h"
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static void test_round_trip(const uint8_t *in, size_t in_size, const char *test_name)
@@ -13,10 +15,10 @@ static void test_round_trip(const uint8_t *in, size_t in_size, const char *test_
     uint8_t decoded[16384] = {0};
 
     size_t encoded_size = lzw_encode(in, in_size, encoded, sizeof(encoded));
-    mu_assert(encoded_size != (size_t)-1, test_name ? test_name : "encoding failed");
+    mu_assert(!error(encoded_size), error_message(encoded_size));
 
     size_t decoded_size = lzw_decode(encoded, encoded_size, decoded, sizeof(decoded));
-    mu_assert(decoded_size != (size_t)-1, test_name ? test_name : "decoding failed");
+    mu_assert(!error(decoded_size), error_message(decoded_size));
 
     char msg[256];
     snprintf(msg, sizeof(msg), "%s: decoded size mismatch", test_name);
@@ -434,6 +436,56 @@ MU_TEST(test_round_trip_exceeds_table_limit)
     mu_assert(memcmp(in, decoded, sizeof(in)) == 0, "decoded should match input even when table exceeded limit");
 }
 
+MU_TEST(test_from_test_data)
+{
+    FILE *f_encoded = fopen("test_data/in", "rb");
+    mu_assert(f_encoded != NULL, "failed to open test_data/in");
+
+    FILE *f_expected = fopen("test_data/out", "rb");
+    mu_assert(f_expected != NULL, "failed to open test_data/out");
+
+    // Get file sizes
+    fseek(f_encoded, 0, SEEK_END);
+    long encoded_size = ftell(f_encoded);
+    fseek(f_encoded, 0, SEEK_SET);
+
+    fseek(f_expected, 0, SEEK_END);
+    long expected_size = ftell(f_expected);
+    fseek(f_expected, 0, SEEK_SET);
+
+    mu_assert(encoded_size > 0, "encoded file should not be empty");
+    mu_assert(expected_size > 0, "expected file should not be empty");
+
+    // Allocate buffers
+    uint8_t *encoded = malloc((size_t)encoded_size);
+    uint8_t *expected = malloc((size_t)expected_size);
+    uint8_t *decoded = malloc((size_t)expected_size * 2); // Extra space for safety
+
+    mu_assert(encoded != NULL && expected != NULL && decoded != NULL, "memory allocation failed");
+
+    // Read files
+    size_t read_encoded = fread(encoded, 1, (size_t)encoded_size, f_encoded);
+    size_t read_expected = fread(expected, 1, (size_t)expected_size, f_expected);
+
+    fclose(f_encoded);
+    fclose(f_expected);
+
+    mu_assert(read_encoded == (size_t)encoded_size, "failed to read all encoded data");
+    mu_assert(read_expected == (size_t)expected_size, "failed to read all expected data");
+
+    // Decode
+    size_t decoded_size = lzw_decode(encoded, (size_t)encoded_size, decoded, (size_t)expected_size * 2);
+    mu_assert(decoded_size != (size_t)-1, "decoding failed");
+    mu_assert(decoded_size == (size_t)expected_size, "decoded size mismatch");
+
+    // Compare
+    mu_assert(memcmp(expected, decoded, (size_t)expected_size) == 0, "decoded content does not match expected");
+
+    free(encoded);
+    free(expected);
+    free(decoded);
+}
+
 MU_TEST_SUITE(test_suite)
 {
     MU_RUN_TEST(test_round_trip_aaa);
@@ -484,6 +536,7 @@ MU_TEST_SUITE(test_suite)
     MU_RUN_TEST(test_round_trip_long_repeating_pattern);
     MU_RUN_TEST(test_round_trip_long_sequential);
     MU_RUN_TEST(test_round_trip_exceeds_table_limit);
+    // MU_RUN_TEST(test_from_test_data);
 }
 
 int main(int argc, char *argv[])

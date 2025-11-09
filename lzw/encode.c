@@ -1,5 +1,7 @@
 #include "encode.h"
+
 #include "common.h"
+#include "encode_table.h"
 #include "writer.h"
 
 #include <inttypes.h>
@@ -18,8 +20,14 @@ size_t lzw_encode(uint8_t const *in, size_t in_size, uint8_t *restrict out, size
 
     uint8_t bits_count = 9;
 
-    uint32_t table[MAX_CODE][256] = {0};
-    uint32_t next_code = 256;
+    int16_t result = writer_write(&w, CLEAR_CODE, bits_count);
+    if (error(result))
+    {
+        return result;
+    }
+
+    struct encode_table table;
+    encode_table_init(&table);
 
     int16_t current_sequence_code = *in;
     size_t read_index = 1;
@@ -28,35 +36,55 @@ size_t lzw_encode(uint8_t const *in, size_t in_size, uint8_t *restrict out, size
     {
         uint8_t next_byte = in[read_index];
 
-        uint32_t next_sequence_code = table[current_sequence_code][next_byte];
-        if (next_sequence_code == 0) // TODO: properly handle zeroes
+        if (encode_table_contains(&table, current_sequence_code, next_byte))
         {
-            if (writer_write(&w, current_sequence_code, bits_count) == -1)
-            {
-                return -1;
-            }
-
-            table[current_sequence_code][next_byte] = next_code;
-            ++next_code; // TODO: handle overflow
-
-            if (is_power_of_two(next_code) && bits_count < MAX_BITS_COUNT)
-            {
-                ++bits_count;
-            }
-
-            current_sequence_code = next_byte;
+            current_sequence_code = encode_table_get_next_sequence_code(&table, current_sequence_code, next_byte);
         }
         else
         {
-            current_sequence_code = next_sequence_code;
+            int16_t result = writer_write(&w, current_sequence_code, bits_count);
+            if (error(result))
+            {
+                return result;
+            }
+
+            result = encode_table_append(&table, current_sequence_code, next_byte);
+            if (error(result))
+            {
+                return result;
+            }
+
+            if (is_power_of_two(table.next_code))
+            {
+                if (bits_count < MAX_BITS_COUNT)
+                {
+                    ++bits_count;
+                }
+                else
+                {
+                    writer_write(&w, CLEAR_CODE, bits_count);
+
+                    encode_table_init(&table);
+                    bits_count = 9;
+                }
+            }
+
+            current_sequence_code = next_byte;
         }
 
         ++read_index;
     }
 
-    if (writer_write(&w, current_sequence_code, bits_count) == -1)
+    result = writer_write(&w, current_sequence_code, bits_count);
+    if (error(result))
     {
-        return -1;
+        return result;
+    }
+
+    writer_write(&w, END_OF_INFORMATION, bits_count);
+    if (error(result))
+    {
+        return result;
     }
 
     return writer_written_bytes(&w);

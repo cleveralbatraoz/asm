@@ -21,10 +21,9 @@ int16_t reader_next(struct reader *r, uint8_t bits_count)
         return -1;
     }
 
-    // TODO: fix index out of bounds
     uint32_t byte1 = r->data[r->byte_index];
-    uint32_t byte2 = r->data[r->byte_index + 1];
-    uint32_t byte3 = r->data[r->byte_index + 2];
+    uint32_t byte2 = (r->byte_index + 1 < r->size) ? r->data[r->byte_index + 1] : 0;
+    uint32_t byte3 = (r->byte_index + 2 < r->size) ? r->data[r->byte_index + 2] : 0;
 
     uint32_t result = byte1 | (byte2 << 8) | (byte3 << 16);
 
