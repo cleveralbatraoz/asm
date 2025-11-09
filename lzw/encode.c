@@ -16,6 +16,8 @@ size_t lzw_encode(uint8_t const *in, size_t in_size, uint8_t *restrict out, size
     struct writer w;
     writer_init(&w, out, out_size);
 
+    uint8_t bits_count = 9;
+
     uint32_t table[MAX_CODE][256] = {0};
     uint32_t next_code = 256;
 
@@ -27,15 +29,20 @@ size_t lzw_encode(uint8_t const *in, size_t in_size, uint8_t *restrict out, size
         uint8_t next_byte = in[read_index];
 
         uint32_t next_sequence_code = table[current_sequence_code][next_byte];
-        if (next_sequence_code == 0)
+        if (next_sequence_code == 0) // TODO: properly handle zeroes
         {
-            if (writer_write(&w, current_sequence_code) == -1)
+            if (writer_write(&w, current_sequence_code, bits_count) == -1)
             {
                 return -1;
             }
 
             table[current_sequence_code][next_byte] = next_code;
-            ++next_code;
+            ++next_code; // TODO: handle overflow
+
+            if (is_power_of_two(next_code) && bits_count < MAX_BITS_COUNT)
+            {
+                ++bits_count;
+            }
 
             current_sequence_code = next_byte;
         }
@@ -47,7 +54,7 @@ size_t lzw_encode(uint8_t const *in, size_t in_size, uint8_t *restrict out, size
         ++read_index;
     }
 
-    if (writer_write(&w, current_sequence_code) == -1)
+    if (writer_write(&w, current_sequence_code, bits_count) == -1)
     {
         return -1;
     }

@@ -1,8 +1,11 @@
 #include "decode.h"
+
 #include "byte_writer.h"
+#include "common.h"
 #include "decode_table.h"
 #include "reader.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -22,7 +25,13 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
     struct byte_writer w;
     byte_writer_init(&w, out, out_size);
 
-    int16_t code = reader_read(&r);
+    uint8_t bits_count = 9;
+
+    int16_t code = reader_next(&r, bits_count);
+    if (code == -1)
+    {
+        return -1;
+    }
     if (code < 256)
     {
         byte_writer_write(&w, code);
@@ -33,9 +42,13 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
     }
 
     int16_t previous_code = code;
-    while (reader_has_next(&r))
+    while (reader_has_next(&r, bits_count))
     {
-        code = reader_read(&r);
+        code = reader_next(&r, bits_count);
+        if (code == -1)
+        {
+            return -1;
+        }
 
         uint8_t append_byte;
 
@@ -60,6 +73,11 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
         }
 
         decode_table_append(&table, previous_code, append_byte);
+
+        if (is_power_of_two(table.next_code + 1) && bits_count < MAX_BITS_COUNT) // TODO: mb omit second check?
+        {
+            bits_count++;
+        }
 
         previous_code = code;
     }

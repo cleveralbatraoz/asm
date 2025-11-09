@@ -5,11 +5,12 @@
 
 struct writer
 {
-    int16_t *data;
+    uint8_t *data;
     size_t size;
-    size_t write_index;
+    size_t byte_index;
+    uint8_t bit_index;
 };
 
 void writer_init(struct writer *w, uint8_t *data, size_t size);
-int32_t writer_write(struct writer *w, int16_t data);
+int16_t writer_write(struct writer *w, int16_t code, uint8_t bits_count);
 size_t writer_written_bytes(struct writer const *w);

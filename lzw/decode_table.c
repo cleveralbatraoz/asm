@@ -23,6 +23,11 @@ int decode_table_contains(struct decode_table const *table, int16_t code)
 
 void decode_table_append(struct decode_table *table, int16_t code, uint8_t byte)
 {
+    if (table->next_code >= MAX_CODE)
+    {
+        return;
+    }
+
     table->entries[table->next_code].previous_code = code;
     table->entries[table->next_code].byte = byte;
     table->entries[table->next_code].has_value = 1;

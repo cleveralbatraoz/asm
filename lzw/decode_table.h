@@ -16,7 +16,7 @@ struct decode_table_entry
 struct decode_table
 {
     struct decode_table_entry entries[MAX_CODE];
-    uint32_t next_code;
+    uint16_t next_code;
 };
 
 void decode_table_init(struct decode_table *table);

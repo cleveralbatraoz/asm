@@ -9,8 +9,8 @@
 
 static void test_round_trip(const uint8_t *in, size_t in_size, const char *test_name)
 {
-    uint8_t encoded[8192];
-    uint8_t decoded[2048];
+    uint8_t encoded[32768] = {0};
+    uint8_t decoded[16384] = {0};
 
     size_t encoded_size = lzw_encode(in, in_size, encoded, sizeof(encoded));
     mu_assert(encoded_size != (size_t)-1, test_name ? test_name : "encoding failed");
@@ -347,6 +347,93 @@ MU_TEST(test_round_trip_compression_unfriendly)
     test_round_trip(in, sizeof(in), __func__);
 }
 
+MU_TEST(test_round_trip_very_long_sequence)
+{
+    uint8_t in[2000];
+    for (size_t i = 0; i < sizeof(in); i++)
+    {
+        in[i] = (uint8_t)(i % 256);
+    }
+    test_round_trip(in, sizeof(in), __func__);
+}
+
+MU_TEST(test_round_trip_extremely_long_sequence)
+{
+    uint8_t in[5000];
+    for (size_t i = 0; i < sizeof(in); i++)
+    {
+        in[i] = (uint8_t)(i % 256);
+    }
+    test_round_trip(in, sizeof(in), __func__);
+}
+
+MU_TEST(test_round_trip_long_repeating_pattern)
+{
+    uint8_t in[3000];
+    const char pattern[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    size_t pattern_len = strlen(pattern);
+    for (size_t i = 0; i < sizeof(in); i++)
+    {
+        in[i] = pattern[i % pattern_len];
+    }
+    test_round_trip(in, sizeof(in), __func__);
+}
+
+MU_TEST(test_round_trip_long_sequential)
+{
+    uint8_t in[3000];
+    for (size_t i = 0; i < sizeof(in); i++)
+    {
+        in[i] = (uint8_t)(i & 0xFF);
+    }
+    test_round_trip(in, sizeof(in), __func__);
+}
+
+MU_TEST(test_round_trip_exceeds_table_limit)
+{
+    // Create a sequence that will generate more than 4096 codes
+    // We need to create many unique patterns to fill the table
+    // Each unique byte pair creates a new code, so we need many unique pairs
+    uint8_t in[10000];
+    size_t idx = 0;
+
+    // Strategy: create many unique patterns by varying sequences
+    // This will generate codes 256, 257, 258, ... up to and beyond 4096
+    for (size_t i = 0; i < 256 && idx < sizeof(in); i++)
+    {
+        in[idx++] = (uint8_t)i;
+    }
+
+    // Now create many unique pairs to fill the table
+    // Each iteration creates new unique sequences
+    for (size_t round = 0; round < 20 && idx < sizeof(in) - 1; round++)
+    {
+        for (size_t i = 0; i < 256 && idx < sizeof(in) - 1; i++)
+        {
+            in[idx++] = (uint8_t)i;
+            in[idx++] = (uint8_t)((i + round) % 256);
+        }
+    }
+
+    // Fill the rest with a pattern
+    while (idx < sizeof(in))
+    {
+        in[idx] = (uint8_t)(idx % 256);
+        idx++;
+    }
+
+    uint8_t encoded[16384] = {0};
+    uint8_t decoded[16384] = {0};
+
+    size_t encoded_size = lzw_encode(in, sizeof(in), encoded, sizeof(encoded));
+    mu_assert(encoded_size != (size_t)-1, "encoding should succeed even when table exceeds limit");
+
+    size_t decoded_size = lzw_decode(encoded, encoded_size, decoded, sizeof(decoded));
+    mu_assert(decoded_size != (size_t)-1, "decoding should succeed even when table exceeded limit");
+    mu_assert_int_eq(sizeof(in), decoded_size);
+    mu_assert(memcmp(in, decoded, sizeof(in)) == 0, "decoded should match input even when table exceeded limit");
+}
+
 MU_TEST_SUITE(test_suite)
 {
     MU_RUN_TEST(test_round_trip_aaa);
@@ -392,6 +479,11 @@ MU_TEST_SUITE(test_suite)
     MU_RUN_TEST(test_round_trip_sparse_pattern);
     MU_RUN_TEST(test_round_trip_compression_friendly);
     MU_RUN_TEST(test_round_trip_compression_unfriendly);
+    MU_RUN_TEST(test_round_trip_very_long_sequence);
+    MU_RUN_TEST(test_round_trip_extremely_long_sequence);
+    MU_RUN_TEST(test_round_trip_long_repeating_pattern);
+    MU_RUN_TEST(test_round_trip_long_sequential);
+    MU_RUN_TEST(test_round_trip_exceeds_table_limit);
 }
 
 int main(int argc, char *argv[])
