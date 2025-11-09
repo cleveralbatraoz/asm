@@ -30,6 +30,8 @@ int16_t reader_next(struct reader *r, uint8_t bits_count)
     result >>= r->bit_index;
     result &= (1 << bits_count) - 1;
 
+    result = reverse_bits(result, bits_count);
+
     advance(&r->byte_index, &r->bit_index, bits_count);
 
     return (int16_t)result;

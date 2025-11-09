@@ -22,6 +22,8 @@ int16_t writer_write(struct writer *w, int16_t code, uint8_t bits_count)
 
     uint32_t code32 = code;
     code32 &= (((uint32_t)1) << bits_count) - 1;
+
+    code32 = reverse_bits(code32, bits_count);
     code32 <<= w->bit_index;
 
     uint32_t *ptr = (uint32_t *)(w->data + w->byte_index);

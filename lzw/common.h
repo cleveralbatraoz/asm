@@ -31,3 +31,5 @@ bool error(int16_t code);
 char const *error_message(int16_t error_code);
 
 bool is_valid_code(int16_t code);
+
+uint32_t reverse_bits(uint32_t value, uint8_t bits_count);
