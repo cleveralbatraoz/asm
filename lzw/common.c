@@ -59,16 +59,3 @@ bool is_valid_code(int16_t code)
 {
     return code >= 0 && code < MAX_CODE && code != CLEAR_CODE && code != END_OF_INFORMATION;
 }
-
-uint32_t reverse_bits(uint32_t value, uint8_t bits_count)
-{
-    uint32_t reversed = 0;
-    for (uint8_t i = 0; i < bits_count; i++)
-    {
-        if (value & (1U << i))
-        {
-            reversed |= (1U << (bits_count - 1 - i));
-        }
-    }
-    return reversed;
-}

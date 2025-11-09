@@ -20,18 +20,28 @@ int16_t writer_write(struct writer *w, int16_t code, uint8_t bits_count)
         return WRITER_OVERFLOW;
     }
 
-    uint32_t code32 = code;
-    code32 &= (((uint32_t)1) << bits_count) - 1;
+    uint32_t data = (uint32_t)code << (32 - bits_count - w->bit_index);
 
-    code32 = reverse_bits(code32, bits_count);
-    code32 <<= w->bit_index;
+    uint8_t bits_in_first = 8 - w->bit_index;
 
-    uint32_t *ptr = (uint32_t *)(w->data + w->byte_index);
-    uint32_t clear_mask = (((uint32_t)1) << bits_count) - 1;
-    clear_mask <<= w->bit_index;
-    *ptr &= ~clear_mask;
+    uint8_t mask1 = ((1 << bits_in_first) - 1) << (8 - w->bit_index - bits_in_first);
+    w->data[w->byte_index] = (w->data[w->byte_index] & ~mask1) | ((data >> 24) & mask1);
 
-    *ptr |= code32;
+    uint8_t bits_in_second = bits_count - bits_in_first;
+    if (bits_in_second > 8)
+        bits_in_second = 8;
+
+    uint8_t mask2 = (1 << bits_in_second) - 1;
+    mask2 <<= (8 - bits_in_second);
+    w->data[w->byte_index + 1] = (w->data[w->byte_index + 1] & ~mask2) | ((data >> 16) & mask2);
+
+    if (bits_count > bits_in_first + 8)
+    {
+        uint8_t bits_in_third = bits_count - bits_in_first - 8;
+        uint8_t mask3 = (1 << bits_in_third) - 1;
+        mask3 <<= (8 - bits_in_third);
+        w->data[w->byte_index + 2] = (w->data[w->byte_index + 2] & ~mask3) | ((data >> 8) & mask3);
+    }
 
     advance(&w->byte_index, &w->bit_index, bits_count);
 
