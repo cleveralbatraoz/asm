@@ -14,8 +14,7 @@
 #define SUCCESS 0
 #define INVALID_CODE -1
 #define TABLE_OVERFLOW -2
-#define WRITER_OVERFLOW -3
-#define DECODE_TABLE_INVARIANT_VIOLATION -4
+#define DECODE_TABLE_INVARIANT_VIOLATION -3
 
 bool error(int16_t code);
 

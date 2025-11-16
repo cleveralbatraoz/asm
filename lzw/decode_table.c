@@ -1,7 +1,6 @@
 #include "decode_table.h"
 
 #include "common.h"
-#include "writer.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -72,30 +71,17 @@ int16_t decode_table_get_first_byte(struct decode_table const *table, int16_t co
     return code;
 }
 
-int16_t decode_table_write_bytes(struct writer *w, int16_t code, struct decode_table const *table)
+void decode_table_write_bytes(uint8_t **w, int16_t code, struct decode_table const *table)
 {
-    if (!is_valid_code(code))
-    {
-        return INVALID_CODE;
-    }
-
     if (code < FIRST_CODE)
     {
-        return writer_write(w, code);
+        *(*w)++ = code;
+        return;
     }
 
     uint32_t entry = table->entries[code];
-    if (!ENTRY_GET_HAS_VALUE(entry))
-    {
-        return DECODE_TABLE_INVARIANT_VIOLATION;
-    }
 
-    int16_t result = decode_table_write_bytes(w, ENTRY_GET_PREVIOUS_CODE(entry), table);
+    decode_table_write_bytes(w, ENTRY_GET_PREVIOUS_CODE(entry), table);
 
-    if (error(result))
-    {
-        return result;
-    }
-
-    return writer_write(w, ENTRY_GET_BYTE(entry));
+    *(*w)++ = ENTRY_GET_BYTE(entry);
 }

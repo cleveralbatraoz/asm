@@ -3,7 +3,6 @@
 #include "common.h"
 #include "decode_table.h"
 #include "reader.h"
-#include "writer.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -33,8 +32,8 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
     struct reader r;
     reader_init(&r, in, in_size);
 
-    struct writer w;
-    writer_init(&w, out, out_size);
+    uint8_t *w = out;
+    uint8_t *out_start = out;
 
     uint8_t bits_count = 9;
 
@@ -63,20 +62,14 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
         }
         else if (previous_code == CLEAR_CODE)
         {
-            if (error(writer_write(&w, code)))
-            {
-                return -1;
-            }
+            *w++ = code;
         }
         else
         {
             bool contains = decode_table_contains(&table, code);
             int16_t handled_code = contains ? code : previous_code;
 
-            if (error(decode_table_write_bytes(&w, handled_code, &table)))
-            {
-                return -1;
-            }
+            decode_table_write_bytes(&w, handled_code, &table);
 
             int16_t append_byte = decode_table_get_first_byte(&table, handled_code);
             if (error(append_byte))
@@ -86,10 +79,7 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
 
             if (!contains)
             {
-                if (error(writer_write(&w, (uint8_t)append_byte)))
-                {
-                    return -1;
-                }
+                *w++ = (uint8_t)append_byte;
             }
 
             if (error(decode_table_append(&table, previous_code, (uint8_t)append_byte)))
@@ -106,5 +96,5 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
         previous_code = code;
     }
 
-    return writer_written_bytes(&w);
+    return w - out_start;
 }

@@ -19,9 +19,6 @@ char const *error_message(int16_t error_code)
     case TABLE_OVERFLOW: {
         return "Table overflow";
     }
-    case WRITER_OVERFLOW: {
-        return "Writer overflow";
-    }
     case DECODE_TABLE_INVARIANT_VIOLATION: {
         return "Table invariant violation";
     }
