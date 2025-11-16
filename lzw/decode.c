@@ -9,10 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static bool is_power_of_two(uint16_t value)
-{
-    return (value & (value - 1)) == 0;
-}
+extern bool is_power_of_two(uint32_t value);
 
 size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size_t out_size)
 {
