@@ -14,15 +14,8 @@
 #define SUCCESS 0
 #define INVALID_CODE -1
 #define TABLE_OVERFLOW -2
-#define DECODE_TABLE_INVARIANT_VIOLATION -3
-#define INPUT_INVARIANT_VIOLATION -4
-#define BYTE_WRITER_OVERFLOW -5
-
-bool is_power_of_two(uint16_t value);
-
-bool has_enough_bits(size_t byte_index, size_t bit_index, size_t size, uint8_t bits_count);
-
-void advance(size_t *byte_index, uint8_t *bit_index, uint8_t bits_count);
+#define WRITER_OVERFLOW -3
+#define DECODE_TABLE_INVARIANT_VIOLATION -4
 
 bool error(int16_t code);
 

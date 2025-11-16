@@ -1,19 +1,33 @@
 #include "decode.h"
 
-#include "byte_writer.h"
 #include "common.h"
 #include "decode_table.h"
 #include "reader.h"
+#include "writer.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
+static bool is_power_of_two(uint16_t value)
+{
+    return (value & (value - 1)) == 0;
+}
+
 size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size_t out_size)
 {
-    if (in == NULL || in_size == 0 || out == NULL || out_size == 0)
+    if (in == NULL)
     {
-        return 0;
+        return -1;
+    }
+    if (out == NULL)
+    {
+        if (in_size == 0)
+        {
+            return 0;
+        }
+
+        return -1;
     }
 
     struct decode_table table;
@@ -22,8 +36,8 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
     struct reader r;
     reader_init(&r, in, in_size);
 
-    struct byte_writer w;
-    byte_writer_init(&w, out, out_size);
+    struct writer w;
+    writer_init(&w, out, out_size);
 
     uint8_t bits_count = 9;
 
@@ -34,7 +48,7 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
         code = reader_next(&r, bits_count);
         if (error(code))
         {
-            return code;
+            return -1;
         }
 
         if (code == CLEAR_CODE)
@@ -48,59 +62,42 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
         }
         else if (!is_valid_code(code))
         {
-            return INPUT_INVARIANT_VIOLATION;
+            return -1;
         }
         else if (previous_code == CLEAR_CODE)
         {
-            int16_t result = byte_writer_write(&w, code);
-            if (error(result))
+            if (error(writer_write(&w, code)))
             {
-                return result;
+                return -1;
             }
         }
         else
         {
-            uint8_t append_byte;
+            bool contains = decode_table_contains(&table, code);
+            int16_t handled_code = contains ? code : previous_code;
 
-            if (decode_table_contains(&table, code))
+            if (error(decode_table_write_bytes(&w, handled_code, &table)))
             {
-                int16_t result = decode_table_write_bytes(&w, code, &table);
-                if (error(result))
-                {
-                    return result;
-                }
-
-                append_byte = decode_table_get_first_byte(&table, code);
-                if (error(append_byte))
-                {
-                    return append_byte;
-                }
+                return -1;
             }
-            else
+
+            int16_t append_byte = decode_table_get_first_byte(&table, handled_code);
+            if (error(append_byte))
             {
-                int16_t result = decode_table_write_bytes(&w, previous_code, &table);
-                if (error(result))
-                {
-                    return result;
-                }
+                return -1;
+            }
 
-                append_byte = decode_table_get_first_byte(&table, previous_code);
-                if (error(append_byte))
+            if (!contains)
+            {
+                if (error(writer_write(&w, (uint8_t)append_byte)))
                 {
-                    return append_byte;
-                }
-
-                result = byte_writer_write(&w, append_byte);
-                if (error(result))
-                {
-                    return result;
+                    return -1;
                 }
             }
 
-            int16_t result = decode_table_append(&table, previous_code, append_byte);
-            if (error(result))
+            if (error(decode_table_append(&table, previous_code, (uint8_t)append_byte)))
             {
-                return result;
+                return -1;
             }
 
             if (is_power_of_two(table.next_code + 1) && bits_count < MAX_BITS_COUNT)
@@ -112,5 +109,5 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
         previous_code = code;
     }
 
-    return byte_writer_written_bytes(&w);
+    return writer_written_bytes(&w);
 }

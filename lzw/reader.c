@@ -32,12 +32,14 @@ int16_t reader_next(struct reader *r, uint8_t bits_count)
 
     uint16_t result = (data >> (32 - bits_count));
 
-    advance(&r->byte_index, &r->bit_index, bits_count);
+    uint8_t advanced_bit_index = r->bit_index + bits_count;
+    r->bit_index = advanced_bit_index % 8;
+    r->byte_index += advanced_bit_index / 8;
 
     return (int16_t)result;
 }
 
 bool reader_has_next(struct reader const *r, uint8_t bits_count)
 {
-    return has_enough_bits(r->byte_index, r->bit_index, r->size, bits_count);
+    return r->byte_index + (r->bit_index + bits_count + 7) / 8 <= r->size;
 }

@@ -1,6 +1,6 @@
 #include "decode_table.h"
 
-#include "byte_writer.h"
+#include "writer.h"
 #include "common.h"
 
 #include <stdbool.h>
@@ -48,7 +48,7 @@ int16_t decode_table_append(struct decode_table *table, int16_t code, uint8_t by
     return table->next_code;
 }
 
-uint8_t decode_table_get_first_byte(struct decode_table const *table, int16_t code)
+int16_t decode_table_get_first_byte(struct decode_table const *table, int16_t code)
 {
     if (!is_valid_code(code))
     {
@@ -75,10 +75,10 @@ uint8_t decode_table_get_first_byte(struct decode_table const *table, int16_t co
         return INVALID_CODE;
     }
 
-    return (uint8_t)code;
+    return code;
 }
 
-int16_t decode_table_write_bytes(struct byte_writer *w, int16_t code, struct decode_table const *table)
+int16_t decode_table_write_bytes(struct writer *w, int16_t code, struct decode_table const *table)
 {
     if (!is_valid_code(code))
     {
@@ -87,7 +87,7 @@ int16_t decode_table_write_bytes(struct byte_writer *w, int16_t code, struct dec
 
     if (code < FIRST_CODE)
     {
-        return byte_writer_write(w, code);
+        return writer_write(w, code);
     }
 
     if (table->entries[code].has_value == 0)
@@ -102,5 +102,5 @@ int16_t decode_table_write_bytes(struct byte_writer *w, int16_t code, struct dec
         return result;
     }
 
-    return byte_writer_write(w, table->entries[code].byte);
+    return writer_write(w, table->entries[code].byte);
 }
