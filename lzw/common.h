@@ -18,7 +18,6 @@
 #define INPUT_INVARIANT_VIOLATION -4
 #define BYTE_WRITER_OVERFLOW -5
 #define WRITER_OVERFLOW -6
-#define ENCODE_TABLE_INVARIANT_VIOLATION -7
 
 bool is_power_of_two(uint16_t value);
 

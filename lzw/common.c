@@ -48,9 +48,6 @@ char const *error_message(int16_t error_code)
     case WRITER_OVERFLOW: {
         return "Writer overflow";
     }
-    case ENCODE_TABLE_INVARIANT_VIOLATION: {
-        return "Encode table invariant violation";
-    }
     }
     return "Unknown error";
 }
