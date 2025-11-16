@@ -1,47 +1,40 @@
 #include "decode_table.h"
 
-#include "writer.h"
 #include "common.h"
+#include "writer.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
+#define ENTRY_GET_PREVIOUS_CODE(entry) ((int16_t)((entry) & 0xFFF))
+#define ENTRY_GET_BYTE(entry) ((uint8_t)(((entry) >> 12) & 0xFF))
+#define ENTRY_GET_HAS_VALUE(entry) ((bool)(((entry) >> 20) & 0x1))
+#define ENTRY_PACK(previous_code, byte, has_value)                                                                     \
+    ((uint32_t)((previous_code) & 0xFFF) | (uint32_t)(((byte) & 0xFF) << 12) | (uint32_t)(((has_value) & 0x1) << 20))
+
 void decode_table_init(struct decode_table *table)
 {
     for (size_t i = 0; i < MAX_CODE; i++)
     {
-        table->entries[i].previous_code = 0;
-        table->entries[i].byte = 0;
-        table->entries[i].has_value = 0;
+        table->entries[i] = 0;
     }
     table->next_code = FIRST_CODE;
 }
 
 bool decode_table_contains(struct decode_table const *table, int16_t code)
 {
-    if (!is_valid_code(code))
-    {
-        return false;
-    }
-    return code < FIRST_CODE || table->entries[code].has_value == 1;
+    return code < FIRST_CODE || ENTRY_GET_HAS_VALUE(table->entries[code]);
 }
 
 int16_t decode_table_append(struct decode_table *table, int16_t code, uint8_t byte)
 {
-    if (!is_valid_code(code))
-    {
-        return INVALID_CODE;
-    }
-
     if (table->next_code >= MAX_CODE)
     {
         return TABLE_OVERFLOW;
     }
 
-    table->entries[table->next_code].previous_code = code;
-    table->entries[table->next_code].byte = byte;
-    table->entries[table->next_code].has_value = 1;
+    table->entries[table->next_code] = ENTRY_PACK(code, byte, 1);
 
     ++table->next_code;
 
@@ -62,12 +55,13 @@ int16_t decode_table_get_first_byte(struct decode_table const *table, int16_t co
             return INVALID_CODE;
         }
 
-        if (table->entries[code].has_value == 0)
+        uint32_t entry = table->entries[code];
+        if (!ENTRY_GET_HAS_VALUE(entry))
         {
             return DECODE_TABLE_INVARIANT_VIOLATION;
         }
 
-        code = table->entries[code].previous_code;
+        code = ENTRY_GET_PREVIOUS_CODE(entry);
     }
 
     if (!is_valid_code(code))
@@ -90,17 +84,18 @@ int16_t decode_table_write_bytes(struct writer *w, int16_t code, struct decode_t
         return writer_write(w, code);
     }
 
-    if (table->entries[code].has_value == 0)
+    uint32_t entry = table->entries[code];
+    if (!ENTRY_GET_HAS_VALUE(entry))
     {
         return DECODE_TABLE_INVARIANT_VIOLATION;
     }
 
-    int16_t result = decode_table_write_bytes(w, table->entries[code].previous_code, table);
+    int16_t result = decode_table_write_bytes(w, ENTRY_GET_PREVIOUS_CODE(entry), table);
 
     if (error(result))
     {
         return result;
     }
 
-    return writer_write(w, table->entries[code].byte);
+    return writer_write(w, ENTRY_GET_BYTE(entry));
 }

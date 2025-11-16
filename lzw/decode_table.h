@@ -1,22 +1,15 @@
 #pragma once
 
-#include "writer.h"
 #include "common.h"
+#include "writer.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-struct decode_table_entry
-{
-    int16_t previous_code;
-    uint16_t byte : 8;
-    uint16_t has_value : 1;
-};
-
 struct decode_table
 {
-    struct decode_table_entry entries[MAX_CODE];
+    uint32_t entries[MAX_CODE];
     int16_t next_code;
 };
 
