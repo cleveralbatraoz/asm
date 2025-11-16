@@ -45,9 +45,6 @@ char const *error_message(int16_t error_code)
     case BYTE_WRITER_OVERFLOW: {
         return "Byte writer overflow";
     }
-    case WRITER_OVERFLOW: {
-        return "Writer overflow";
-    }
     }
     return "Unknown error";
 }
