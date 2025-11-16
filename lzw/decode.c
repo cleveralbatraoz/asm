@@ -61,7 +61,7 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
             bool contains = decode_table_contains(&table, code);
             uint16_t handled_code = contains ? code : previous_code;
 
-            decode_table_write_bytes(&w, handled_code, &table);
+            w += decode_table_write_bytes(w, handled_code, &table);
 
             uint8_t append_byte = decode_table_get_first_byte(&table, handled_code);
 
@@ -70,11 +70,7 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
                 *w++ = append_byte;
             }
 
-            int16_t result = decode_table_append(&table, previous_code, append_byte);
-            if (error(result))
-            {
-                return result;
-            }
+            decode_table_append(&table, previous_code, append_byte);
 
             if (is_power_of_two(table.next_code + 1) && bits_count < MAX_BITS_COUNT)
             {

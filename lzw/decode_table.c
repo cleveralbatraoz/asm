@@ -14,7 +14,11 @@
 
 void decode_table_init(struct decode_table *table)
 {
-    for (size_t i = 0; i < MAX_CODE; i++)
+    for (size_t i = 0; i < 256; i++)
+    {
+        table->entries[i] = ENTRY_PACK(0, 0, 1);
+    }
+    for (size_t i = 256; i < MAX_CODE; i++)
     {
         table->entries[i] = 0;
     }
@@ -23,21 +27,13 @@ void decode_table_init(struct decode_table *table)
 
 bool decode_table_contains(struct decode_table const *table, uint16_t code)
 {
-    return code < FIRST_CODE || ENTRY_GET_HAS_VALUE(table->entries[code]);
+    return ENTRY_GET_HAS_VALUE(table->entries[code]);
 }
 
-int16_t decode_table_append(struct decode_table *table, int16_t code, uint8_t byte)
+void decode_table_append(struct decode_table *table, int16_t code, uint8_t byte)
 {
-    if (table->next_code >= MAX_CODE)
-    {
-        return TABLE_OVERFLOW;
-    }
-
     table->entries[table->next_code] = ENTRY_PACK(code, byte, 1);
-
     ++table->next_code;
-
-    return table->next_code;
 }
 
 uint8_t decode_table_get_first_byte(struct decode_table const *table, uint16_t code)
@@ -48,20 +44,22 @@ uint8_t decode_table_get_first_byte(struct decode_table const *table, uint16_t c
         code = ENTRY_GET_PREVIOUS_CODE(entry);
     }
 
-    return (uint8_t)code;
+    return code;
 }
 
-void decode_table_write_bytes(uint8_t **w, uint16_t code, struct decode_table const *table)
+uint16_t decode_table_write_bytes(uint8_t *w, uint16_t code, struct decode_table const *table)
 {
     if (code < FIRST_CODE)
     {
-        *(*w)++ = code;
-        return;
+        w[0] = code;
+        return 1;
     }
 
     uint32_t entry = table->entries[code];
 
-    decode_table_write_bytes(w, ENTRY_GET_PREVIOUS_CODE(entry), table);
+    uint16_t bytes = decode_table_write_bytes(w, ENTRY_GET_PREVIOUS_CODE(entry), table);
 
-    *(*w)++ = ENTRY_GET_BYTE(entry);
+    w[bytes] = ENTRY_GET_BYTE(entry);
+
+    return bytes + 1;
 }
