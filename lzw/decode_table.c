@@ -21,7 +21,7 @@ void decode_table_init(struct decode_table *table)
     table->next_code = FIRST_CODE;
 }
 
-bool decode_table_contains(struct decode_table const *table, int16_t code)
+bool decode_table_contains(struct decode_table const *table, uint16_t code)
 {
     return code < FIRST_CODE || ENTRY_GET_HAS_VALUE(table->entries[code]);
 }
@@ -40,38 +40,18 @@ int16_t decode_table_append(struct decode_table *table, int16_t code, uint8_t by
     return table->next_code;
 }
 
-int16_t decode_table_get_first_byte(struct decode_table const *table, int16_t code)
+uint8_t decode_table_get_first_byte(struct decode_table const *table, uint16_t code)
 {
-    if (!is_valid_code(code))
-    {
-        return INVALID_CODE;
-    }
-
     while (code >= FIRST_CODE)
     {
-        if (!is_valid_code(code))
-        {
-            return INVALID_CODE;
-        }
-
         uint32_t entry = table->entries[code];
-        if (!ENTRY_GET_HAS_VALUE(entry))
-        {
-            return DECODE_TABLE_INVARIANT_VIOLATION;
-        }
-
         code = ENTRY_GET_PREVIOUS_CODE(entry);
     }
 
-    if (!is_valid_code(code))
-    {
-        return INVALID_CODE;
-    }
-
-    return code;
+    return (uint8_t)code;
 }
 
-void decode_table_write_bytes(uint8_t **w, int16_t code, struct decode_table const *table)
+void decode_table_write_bytes(uint8_t **w, uint16_t code, struct decode_table const *table)
 {
     if (code < FIRST_CODE)
     {

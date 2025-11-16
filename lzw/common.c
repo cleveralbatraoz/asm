@@ -25,8 +25,3 @@ char const *error_message(int16_t error_code)
     }
     return "Unknown error";
 }
-
-bool is_valid_code(int16_t code)
-{
-    return code >= 0 && code < MAX_CODE && code != CLEAR_CODE && code != END_OF_INFORMATION;
-}

@@ -19,5 +19,3 @@
 bool error(int16_t code);
 
 char const *error_message(int16_t error_code);
-
-bool is_valid_code(int16_t code);

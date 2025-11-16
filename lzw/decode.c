@@ -37,15 +37,11 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
 
     uint8_t bits_count = 9;
 
-    int16_t previous_code = CLEAR_CODE;
-    int16_t code;
+    uint16_t previous_code = CLEAR_CODE;
+    uint16_t code;
     while (reader_has_next(&r, bits_count))
     {
         code = reader_next(&r, bits_count);
-        if (error(code))
-        {
-            return -1;
-        }
 
         if (code == CLEAR_CODE)
         {
@@ -56,10 +52,6 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
         {
             break;
         }
-        else if (!is_valid_code(code))
-        {
-            return -1;
-        }
         else if (previous_code == CLEAR_CODE)
         {
             *w++ = code;
@@ -67,24 +59,21 @@ size_t lzw_decode(const uint8_t *in, size_t in_size, uint8_t *restrict out, size
         else
         {
             bool contains = decode_table_contains(&table, code);
-            int16_t handled_code = contains ? code : previous_code;
+            uint16_t handled_code = contains ? code : previous_code;
 
             decode_table_write_bytes(&w, handled_code, &table);
 
-            int16_t append_byte = decode_table_get_first_byte(&table, handled_code);
-            if (error(append_byte))
-            {
-                return -1;
-            }
+            uint8_t append_byte = decode_table_get_first_byte(&table, handled_code);
 
             if (!contains)
             {
-                *w++ = (uint8_t)append_byte;
+                *w++ = append_byte;
             }
 
-            if (error(decode_table_append(&table, previous_code, (uint8_t)append_byte)))
+            int16_t result = decode_table_append(&table, previous_code, append_byte);
+            if (error(result))
             {
-                return -1;
+                return result;
             }
 
             if (is_power_of_two(table.next_code + 1) && bits_count < MAX_BITS_COUNT)
