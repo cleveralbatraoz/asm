@@ -4,19 +4,20 @@
 
 simd_strlen:
         mov rax, rdi
-		pxor xmm0, xmm0
+        vpxor ymm0, ymm0, ymm0
 
 iter:
-        pcmpeqb xmm0, [rax]
-        pmovmskb esi, xmm0
+        vpcmpeqb ymm1, ymm0, [rax]
+        vpmovmskb esi, ymm1
         bsf esi, esi
-		jnz return
-        add rax, 16
+        jnz return
+        add rax, 32
         jmp iter
 
 return:
         add rax, rsi
         sub rax, rdi
+        vzeroupper
         ret
 
         section .note.GNU-stack
