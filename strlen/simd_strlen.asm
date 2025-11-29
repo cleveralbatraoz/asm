@@ -10,7 +10,7 @@ iter:
         pcmpeqb xmm0, [rax]
         pmovmskb esi, xmm0
         bsf esi, esi
-        jnz return
+		jnz return
         add rax, 16
         jmp iter
 
