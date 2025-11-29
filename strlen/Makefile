@@ -1,8 +1,16 @@
-all:
-	nasm -f macho64 -o strlen_dummy_impl.o src/strlen_dummy_impl.asm
-	nasm -f macho64 -o strlen_vector_impl.o src/strlen_vector_impl.asm
-	clang -std=c17 --pedantic-errors -O3 -o main.o -c src/main.c
-	clang strlen_dummy_impl.o strlen_vector_impl.o main.o -o strlen.out
+bin:
+	mkdir -p bin
+
+build: bin
+	nasm -f elf64 simd_strlen.asm -o bin/simd_strlen.o
+	gcc -std=c17 --pedantic-errors -Wall -g -O0 -m64 main.c bin/simd_strlen.o -o bin/strlen
+
+run:
+	bin/strlen
 
 clean:
-	rm -f *.o *.out
+	rm -rf bin
+
+format:
+	clang-format -i main.c
+	nasmfmt simd_strlen.asm
